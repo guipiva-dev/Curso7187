@@ -1,4 +1,4 @@
-/*! UIkit 3.2.1 | http://www.getuikit.com | (c) 2014 - 2019 YOOtheme | MIT License */
+/*! UIkit 3.0.3 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
@@ -386,7 +386,7 @@
                 var this$1 = this;
 
 
-                if (this.isActive() || !this.title) {
+                if (uikitUtil.includes(actives, this)) {
                     return;
                 }
 
@@ -410,11 +410,13 @@
 
             hide: function() {
 
-                if (!this.isActive() || uikitUtil.matches(this.$el, 'input:focus')) {
+                var index = actives.indexOf(this);
+
+                if (!~index || uikitUtil.matches(this.$el, 'input') && this.$el === document.activeElement) {
                     return;
                 }
 
-                actives.splice(actives.indexOf(this), 1);
+                actives.splice(index, 1);
 
                 clearTimeout(this.showTimer);
                 clearInterval(this.hideTimer);
@@ -440,33 +442,18 @@
 
                 this.toggleElement(this.tooltip, true);
 
-            },
-
-            isActive: function() {
-                return uikitUtil.includes(actives, this);
             }
 
         },
 
-        events: ( obj = {
-
-            focus: 'show',
-            blur: 'hide'
-
-        }, obj[(uikitUtil.pointerEnter + " " + uikitUtil.pointerLeave)] = function (e) {
-                if (uikitUtil.isTouch(e)) {
-                    return;
+        events: ( obj = {}, obj[("focus " + uikitUtil.pointerEnter + " " + uikitUtil.pointerDown)] = function (e) {
+                if (e.type !== uikitUtil.pointerDown || !uikitUtil.isTouch(e)) {
+                    this.show();
                 }
-                e.type === uikitUtil.pointerEnter
-                    ? this.show()
-                    : this.hide();
-            }, obj[uikitUtil.pointerDown] = function (e) {
+            }, obj.blur = 'hide', obj[uikitUtil.pointerLeave] = function (e) {
                 if (!uikitUtil.isTouch(e)) {
-                    return;
+                    this.hide();
                 }
-                this.isActive()
-                    ? this.hide()
-                    : this.show();
             }, obj )
 
     };

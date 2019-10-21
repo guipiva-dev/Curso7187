@@ -1,4 +1,4 @@
-/*! UIkit 3.2.1 | http://www.getuikit.com | (c) 2014 - 2019 YOOtheme | MIT License */
+/*! UIkit 3.0.3 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
@@ -22,7 +22,7 @@
             name: String,
             params: Object,
             type: String,
-            url: String
+            url: String,
         },
 
         data: {

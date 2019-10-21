@@ -1,4 +1,4 @@
-/*! UIkit 3.2.1 | http://www.getuikit.com | (c) 2014 - 2019 YOOtheme | MIT License */
+/*! UIkit 3.0.3 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
@@ -147,13 +147,12 @@
     var style;
 
     function addStyle() {
-        if (style) {
-            return;
+        if (!style) {
+            style = uikitUtil.append(document.head, '<style>').sheet;
+            style.insertRule(
+                ("." + targetClass + " > * {\n                    margin-top: 0 !important;\n                    transform: none !important;\n                }"), 0
+            );
         }
-        style = uikitUtil.append(document.head, '<style>').sheet;
-        style.insertRule(
-            ("." + targetClass + " > * {\n            margin-top: 0 !important;\n            transform: none !important;\n        }"), 0
-        );
     }
 
     var Component = {
@@ -200,7 +199,7 @@
             children: {
 
                 get: function() {
-                    return uikitUtil.toNodes(this.target && this.target.children);
+                    return uikitUtil.toNodes(this.target.children);
                 },
 
                 watch: function(list, old) {
@@ -239,11 +238,12 @@
 
             this.updateState();
 
-            if (this.selActive !== false) {
-                var actives = uikitUtil.$$(this.selActive, this.$el);
-                this.toggles.forEach(function (el) { return uikitUtil.toggleClass(el, this$1.cls, uikitUtil.includes(actives, el)); });
+            if (this.selActive === false) {
+                return;
             }
 
+            var actives = uikitUtil.$$(this.selActive, this.$el);
+            this.toggles.forEach(function (el) { return uikitUtil.toggleClass(el, this$1.cls, uikitUtil.includes(actives, el)); });
         },
 
         methods: {
@@ -272,7 +272,7 @@
                 var ref = this;
                 var children = ref.children;
 
-                this.toggles.forEach(function (el) { return uikitUtil.toggleClass(el, this$1.cls, !!matchFilter(el, this$1.attrItem, state)); });
+                this.toggles.forEach(function (el) { return uikitUtil.toggleClass(el, this$1.cls, matchFilter(el, this$1.attrItem, state)); });
 
                 var apply = function () {
 
@@ -318,37 +318,28 @@
 
     function mergeState(el, attr, state) {
 
-        var filterBy = getFilter(el, attr);
-        var filter = filterBy.filter;
-        var group = filterBy.group;
-        var sort = filterBy.sort;
-        var order = filterBy.order; if ( order === void 0 ) order = 'asc';
+        uikitUtil.toNodes(el).forEach(function (el) {
+            var filterBy = getFilter(el, attr);
+            var filter = filterBy.filter;
+            var group = filterBy.group;
+            var sort = filterBy.sort;
+            var order = filterBy.order; if ( order === void 0 ) order = 'asc';
 
-        if (filter || uikitUtil.isUndefined(sort)) {
+            if (filter || uikitUtil.isUndefined(sort)) {
 
-            if (group) {
-
-                if (filter) {
+                if (group) {
                     delete state.filter[''];
                     state.filter[group] = filter;
                 } else {
-                    delete state.filter[group];
-
-                    if (uikitUtil.isEmpty(state.filter) || '' in state.filter) {
-                        state.filter = {'': filter || ''};
-                    }
-
+                    state.filter = {'': filter || ''};
                 }
 
-            } else {
-                state.filter = {'': filter || ''};
             }
 
-        }
-
-        if (!uikitUtil.isUndefined(sort)) {
-            state.sort = [sort, order];
-        }
+            if (!uikitUtil.isUndefined(sort)) {
+                state.sort = [sort, order];
+            }
+        });
 
         return state;
     }
@@ -361,15 +352,16 @@
 
 
         var ref$1 = getFilter(el, attr);
-        var filter = ref$1.filter; if ( filter === void 0 ) filter = '';
+        var filter = ref$1.filter;
         var group = ref$1.group; if ( group === void 0 ) group = '';
         var sort = ref$1.sort;
         var order = ref$1.order; if ( order === void 0 ) order = 'asc';
 
-        return uikitUtil.isUndefined(sort)
-            ? group in stateFilter && filter === stateFilter[group]
-                || !filter && group && !(group in stateFilter) && !stateFilter['']
-            : stateSort === sort && stateOrder === order;
+        filter = uikitUtil.isUndefined(sort) ? filter || '' : filter;
+        sort = uikitUtil.isUndefined(filter) ? sort || '' : sort;
+
+        return (uikitUtil.isUndefined(filter) || group in stateFilter && filter === stateFilter[group])
+            && (uikitUtil.isUndefined(sort) || stateSort === sort && stateOrder === order);
     }
 
     function isEqualList(listA, listB) {

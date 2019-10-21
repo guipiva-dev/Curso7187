@@ -1,4 +1,4 @@
-/*! UIkit 3.2.1 | http://www.getuikit.com | (c) 2014 - 2019 YOOtheme | MIT License */
+/*! UIkit 3.0.3 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
@@ -29,15 +29,12 @@
         },
 
         connected: function() {
-            this.autoplay && this.startAutoplay();
+            this.startAutoplay();
+            this.userInteracted = false;
         },
 
         disconnected: function() {
             this.stopAutoplay();
-        },
-
-        update: function() {
-            uikitUtil.attr(this.slides, 'tabindex', '-1');
         },
 
         events: [
@@ -48,16 +45,50 @@
 
                 el: document,
 
+                handler: function() {
+                    if (document.hidden) {
+                        this.stopAutoplay();
+                    } else {
+                        !this.userInteracted && this.startAutoplay();
+                    }
+                }
+
+            },
+
+            {
+
+                name: uikitUtil.pointerDown,
+                handler: function() {
+                    this.userInteracted = true;
+                    this.stopAutoplay();
+                }
+
+            },
+
+            {
+
+                name: 'mouseenter',
+
                 filter: function() {
                     return this.autoplay;
                 },
 
                 handler: function() {
-                    if (document.hidden) {
-                        this.stopAutoplay();
-                    } else {
-                        this.startAutoplay();
-                    }
+                    this.isHovering = true;
+                }
+
+            },
+
+            {
+
+                name: 'mouseleave',
+
+                filter: function() {
+                    return this.autoplay;
+                },
+
+                handler: function() {
+                    this.isHovering = false;
                 }
 
             }
@@ -72,18 +103,19 @@
 
                 this.stopAutoplay();
 
-                this.interval = setInterval(
-                    function () { return (!this$1.draggable || !uikitUtil.$(':focus', this$1.$el))
-                        && (!this$1.pauseOnHover || !uikitUtil.matches(this$1.$el, ':hover'))
-                        && !this$1.stack.length
-                        && this$1.show('next'); },
-                    this.autoplayInterval
-                );
+                if (this.autoplay) {
+                    this.interval = setInterval(
+                        function () { return !(this$1.isHovering && this$1.pauseOnHover) && !this$1.stack.length && this$1.show('next'); },
+                        this.autoplayInterval
+                    );
+                }
 
             },
 
             stopAutoplay: function() {
-                this.interval && clearInterval(this.interval);
+                if (this.interval) {
+                    clearInterval(this.interval);
+                }
             }
 
         }
@@ -110,7 +142,7 @@
                 var fn = this$1[key];
                 this$1[key] = function (e) {
 
-                    var pos = uikitUtil.getEventPos(e).x * (uikitUtil.isRtl ? -1 : 1);
+                    var pos = uikitUtil.getPos(e).x * (uikitUtil.isRtl ? -1 : 1);
 
                     this$1.prevPos = pos !== this$1.pos ? this$1.pos : this$1.prevPos;
                     this$1.pos = pos;
@@ -136,7 +168,6 @@
 
                     if (!this.draggable
                         || !uikitUtil.isTouch(e) && hasTextNodesOnly(e.target)
-                        || uikitUtil.closest(e.target, uikitUtil.selInput)
                         || e.button > 0
                         || this.length < 2
                     ) {
@@ -206,8 +237,6 @@
                 uikitUtil.on(window, 'scroll', this.unbindMove);
                 uikitUtil.on(document, uikitUtil.pointerUp, this.end, true);
 
-                uikitUtil.css(this.list, 'userSelect', 'none');
-
             },
 
             move: function(e) {
@@ -224,8 +253,6 @@
                 if (distance === 0 || this.prevPos === this.pos || !this.dragging && Math.abs(distance) < this.threshold) {
                     return;
                 }
-
-                uikitUtil.css(this.list, 'pointerEvents', 'none');
 
                 e.cancelable && e.preventDefault();
 
@@ -318,9 +345,9 @@
                         this.show(this.dir > 0 && !dirChange || this.dir < 0 && dirChange ? 'next' : 'previous', true);
                     }
 
-                }
+                    uikitUtil.preventClick();
 
-                uikitUtil.css(this.list, {userSelect: '', pointerEvents: ''});
+                }
 
                 this.drag
                     = this.percent
@@ -438,8 +465,7 @@
             easing: String,
             index: Number,
             finite: Boolean,
-            velocity: Number,
-            selSlides: String
+            velocity: Number
         },
 
         data: function () { return ({
@@ -447,7 +473,6 @@
             finite: false,
             velocity: 1,
             index: 0,
-            prevIndex: -1,
             stack: [],
             percent: 0,
             clsActive: 'uk-active',
@@ -456,22 +481,16 @@
             transitionOptions: {}
         }); },
 
-        connected: function() {
-            this.prevIndex = -1;
-            this.index = this.getValidIndex(this.index);
-            this.stack = [];
-        },
-
-        disconnected: function() {
-            uikitUtil.removeClass(this.slides, this.clsActive);
-        },
-
         computed: {
 
             duration: function(ref, $el) {
                 var velocity = ref.velocity;
 
                 return speedUp($el.offsetWidth / velocity);
+            },
+
+            length: function() {
+                return this.slides.length;
             },
 
             list: function(ref, $el) {
@@ -486,25 +505,12 @@
 
             selSlides: function(ref) {
                 var selList = ref.selList;
-                var selSlides = ref.selSlides;
 
-                return (selList + " " + (selSlides || '> *'));
+                return (selList + " > *");
             },
 
-            slides: {
-
-                get: function() {
-                    return uikitUtil.$$(this.selSlides, this.$el);
-                },
-
-                watch: function() {
-                    this.$reset();
-                }
-
-            },
-
-            length: function() {
-                return this.slides.length;
+            slides: function() {
+                return uikitUtil.toNodes(this.list.children);
             }
 
         },
@@ -638,7 +644,7 @@
             },
 
             _getDistance: function(prev, next) {
-                return this._getTransitioner(prev, prev !== next && next).getDistance();
+                return new this._getTransitioner(prev, prev !== next && next).getDistance();
             },
 
             _translate: function(percent, prev, next) {
@@ -692,11 +698,10 @@
                     return;
                 }
 
-                var index = this.getValidIndex(this.index);
-
-                if (!~this.prevIndex || this.index !== index) {
-                    this.show(index);
-                }
+                var index = this.getValidIndex();
+                delete this.index;
+                uikitUtil.removeClass(this.slides, this.clsActive, this.clsActivated);
+                this.show(index);
 
             },
 
@@ -710,8 +715,7 @@
         if ( value === void 0 ) value = 0;
         if ( unit === void 0 ) unit = '%';
 
-        value += value ? unit : '';
-        return uikitUtil.isIE ? ("translateX(" + value + ")") : ("translate3d(" + value + ", 0, 0)"); // currently not translate3d in IE, translate3d within translate3d does not work while transitioning
+        return ("translateX(" + value + (value ? unit : '') + ")"); // currently not translate3d to support IE, translate3d within translate3d does not work while transitioning
     }
 
     function Transitioner (prev, next, dir, ref) {
@@ -891,7 +895,7 @@
 
         props: {
             center: Boolean,
-            sets: Boolean
+            sets: Boolean,
         },
 
         data: {
@@ -913,7 +917,7 @@
             finite: function(ref) {
                 var finite = ref.finite;
 
-                return finite || Math.ceil(getWidth(this.list)) < bounds(this.list).width + getMaxWidth(this.list) + this.center;
+                return finite || getWidth(this.list) < bounds(this.list).width + getMaxWidth(this.list) + this.center;
             },
 
             maxIndex: function() {
@@ -923,7 +927,7 @@
                 }
 
                 if (this.center) {
-                    return uikitUtil.last(this.sets);
+                    return this.sets[this.sets.length - 1];
                 }
 
                 uikitUtil.css(this.slides, 'order', '');
@@ -983,7 +987,7 @@
 
                 }, []);
 
-                return !uikitUtil.isEmpty(sets) && sets;
+                return sets && sets.length && sets;
 
             },
 
@@ -1010,10 +1014,6 @@
                     var index = uikitUtil.data(el, this$1.attrItem);
                     this$1.maxIndex && uikitUtil.toggleClass(el, 'uk-hidden', uikitUtil.isNumeric(index) && (this$1.sets && !uikitUtil.includes(this$1.sets, uikitUtil.toFloat(index)) || index > this$1.maxIndex));
                 });
-
-                if (this.length && !this.dragging && !this.stack.length) {
-                    this._getTransitioner().translate(1);
-                }
 
             },
 
